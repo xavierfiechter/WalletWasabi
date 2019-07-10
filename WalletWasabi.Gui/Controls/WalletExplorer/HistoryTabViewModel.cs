@@ -22,12 +22,21 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		private SortOrder _dateSortDirection;
 		private SortOrder _amountSortDirection;
 		private SortOrder _transactionSortDirection;
+		private bool _isFirstLoading;
+
+		public bool IsFirstLoading
+		{
+			get => _isFirstLoading;
+			set => this.RaiseAndSetIfChanged(ref _isFirstLoading, value);
+		}
 
 		public ReactiveCommand<Unit, Unit> SortCommand { get; }
 
 		public HistoryTabViewModel(WalletViewModel walletViewModel)
 			: base("History", walletViewModel)
 		{
+			IsFirstLoading = true;
+
 			Transactions = new ObservableCollection<TransactionViewModel>();
 
 			this.WhenAnyValue(x => x.SelectedTransaction).Subscribe(async transaction =>
@@ -40,7 +49,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				await transaction.TryCopyTxIdToClipboardAsync();
 			});
 
-			SortCommand = ReactiveCommand.Create(() => RefreshOrdering());
+			SortCommand = ReactiveCommand.Create(RefreshOrdering);
 
 			DateSortDirection = SortOrder.Decreasing;
 
@@ -53,7 +62,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 			if (Disposables != null)
 			{
-				throw new Exception("Histroy Tab was opened before it was closed.");
+				throw new Exception("History Tab was opened before it was closed.");
 			}
 
 			Disposables = new CompositeDisposable();
@@ -87,10 +96,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		{
 			try
 			{
-				var txRecordList = await Task.Run(() =>
-				{
-					return BuildTxRecordList();
-				});
+				var txRecordList = await Task.Run(BuildTxRecordList);
 
 				var rememberSelectedTransactionId = SelectedTransaction?.TransactionId;
 				Transactions?.Clear();
@@ -119,6 +125,10 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			{
 				Logger.LogError<HistoryTabViewModel>($"Error while RewriteTable on HistoryTab:  {ex}.");
 			}
+			finally
+			{
+				IsFirstLoading = false;
+			}
 		}
 
 		private List<(DateTimeOffset dateTime, Height height, Money amount, string label, uint256 transactionId)> BuildTxRecordList()
@@ -128,7 +138,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			List<Transaction> trs = new List<Transaction>();
 			var txRecordList = new List<(DateTimeOffset dateTime, Height height, Money amount, string label, uint256 transactionId)>();
 
-			if (walletService == null)
+			if (walletService is null)
 			{
 				return txRecordList;
 			}
@@ -157,7 +167,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				}
 				else
 				{
-					dateTime = foundTransaction.FirstSeenIfMemPoolTime ?? DateTimeOffset.UtcNow;
+					dateTime = foundTransaction.FirstSeenIfMempoolTime ?? DateTimeOffset.UtcNow;
 				}
 				if (found != default) // if found
 				{
@@ -201,7 +211,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					}
 					else
 					{
-						dateTime = foundSpenderTransaction.FirstSeenIfMemPoolTime ?? DateTimeOffset.UtcNow;
+						dateTime = foundSpenderTransaction.FirstSeenIfMempoolTime ?? DateTimeOffset.UtcNow;
 					}
 
 					var foundSpenderCoin = txRecordList.FirstOrDefault(x => x.transactionId == coin.SpenderTransactionId);

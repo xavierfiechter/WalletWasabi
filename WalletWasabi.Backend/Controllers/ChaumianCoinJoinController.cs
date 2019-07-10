@@ -64,6 +64,7 @@ namespace WalletWasabi.Backend.Controllers
 					Phase = round.Phase,
 					SchnorrPubKeys = round.MixingLevels.SchnorrPubKeys,
 					Denomination = round.MixingLevels.GetBaseDenomination(),
+					InputRegistrationTimesout = round.InputRegistrationTimesout,
 					RegisteredPeerCount = round.CountAlices(syncLock: false),
 					RequiredPeerCount = round.AnonymitySet,
 					MaximumInputCountPerPeer = 7, // Constant for now. If we want to do something with it later, we'll put it to the config file.
@@ -169,7 +170,7 @@ namespace WalletWasabi.Backend.Controllers
 						}
 						if (Coordinator.AnyRunningRoundContainsInput(inputProof.Input.ToOutPoint(), out List<Alice> tnr))
 						{
-							if (tr.Union(tnr).Count() > tr.Count())
+							if (tr.Union(tnr).Count() > tr.Count)
 							{
 								return BadRequest("Input is already registered in another round.");
 							}
@@ -182,8 +183,8 @@ namespace WalletWasabi.Backend.Controllers
 							return BadRequest($"Input is banned from participation for {(int)bannedElem.BannedRemaining.TotalMinutes} minutes: {inputProof.Input.Index}:{inputProof.Input.TransactionId}.");
 						}
 
-						var txoutResponseTask = batch.GetTxOutAsync(inputProof.Input.TransactionId, (int)inputProof.Input.Index, includeMempool: true);
-						getTxOutResponses.Add((inputProof, txoutResponseTask));
+						var txOutResponseTask = batch.GetTxOutAsync(inputProof.Input.TransactionId, (int)inputProof.Input.Index, includeMempool: true);
+						getTxOutResponses.Add((inputProof, txOutResponseTask));
 					}
 
 					// Perform all RPC request at once
@@ -241,22 +242,22 @@ namespace WalletWasabi.Backend.Controllers
 							return BadRequest("Provided input must be witness_v0_keyhash.");
 						}
 
-						TxOut txout = getTxOutResponse.TxOut;
+						TxOut txOut = getTxOutResponse.TxOut;
 
-						var address = (BitcoinWitPubKeyAddress)txout.ScriptPubKey.GetDestinationAddress(Network);
+						var address = (BitcoinWitPubKeyAddress)txOut.ScriptPubKey.GetDestinationAddress(Network);
 						// Check if proofs are valid.
 						if (!address.VerifyMessage(blindedOutputScriptsHash, inputProof.Proof))
 						{
 							return BadRequest("Provided proof is invalid.");
 						}
 
-						inputs.Add(new Coin(inputProof.Input.ToOutPoint(), txout));
+						inputs.Add(new Coin(inputProof.Input.ToOutPoint(), txOut));
 					}
 
 					var acceptedBlindedOutputScripts = new List<uint256>();
 
 					// Calculate expected networkfee to pay after base denomination.
-					int inputCount = inputs.Count();
+					int inputCount = inputs.Count;
 					Money networkFeeToPayAfterBaseDenomination = (inputCount * round.FeePerInputs) + (2 * round.FeePerOutputs);
 
 					// Check if inputs have enough coins.
@@ -391,7 +392,7 @@ namespace WalletWasabi.Backend.Controllers
 
 						alice.BlindedOutputScripts = alice.BlindedOutputScripts.Take(takeBlindCount).ToArray();
 						alice.BlindedOutputSignatures = alice.BlindedOutputSignatures.Take(takeBlindCount).ToArray();
-						resp.BlindedOutputSignatures = alice.BlindedOutputSignatures; // Don't give back more mixing levels than we'll use.
+						resp.BlindedOutputSignatures = alice.BlindedOutputSignatures; // Do not give back more mixing levels than we'll use.
 
 						// Progress round if needed.
 						if (round.AllAlices(AliceState.ConnectionConfirmed))

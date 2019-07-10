@@ -4,6 +4,14 @@ We are happy to announce an experiment, called: **The Wasabi Contribution Game**
 
 ![](https://i.imgur.com/0GwL58Z.png)
 
+## Update (2019-07-08)
+
+In PR https://github.com/zkSNACKs/WalletWasabi/pull/1850 nopara73 implemented @NicolasDorier's changes, so 17+217=234 points added to Nicolas's score.
+
+## Update (2019-06-28)
+
+PR https://github.com/zkSNACKs/WalletWasabi/pull/1661 moved around large files. 49+154+50 lines have been removed and added, so 506 lines will come down from @jmacato's score.
+
 ## Update (2019-06-28)
 
 - The originally postend links on additions and deletions doesn't work, due to a GitHub bug. It seems like the timeframe specified is lagging behind 5 days, so it may appear that nobody contributed, yet it's 28 already and there were many contributions, so the adjusted links are:
@@ -19,6 +27,6 @@ We are happy to announce an experiment, called: **The Wasabi Contribution Game**
 - Number of commits DO NOT count.
 - The sum of additions and deletions DO count.
 - Only merged pull requests count.
-- Merges of the maintainer (nopara73) may screw the results. We'll investigate this and if we find this to be the case, the maintainer's merges will either be discounted or the maintainer will be disqualified.
+- Merges of the maintainer (nopara73) may skew the results. We'll investigate this and if we find this to be the case, the maintainer's merges will either be discounted or the maintainer will be disqualified.
 - If someone is found intentionally manipulating the results, she or he will be disqualified. We do not plan to actively look for reasons to disqualify anyone, we would like to trust in the honesty of all contributors.
 - Keep checking your GitHub bells, because at the end of the game we will open an issue, in that tagging all the contributors, describing where they should send their BTC addresses for the payouts.

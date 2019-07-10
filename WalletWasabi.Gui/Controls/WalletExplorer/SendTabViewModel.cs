@@ -56,13 +56,14 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		private string _amountToolTip;
 		private bool _isBusy;
 		private bool _isHardwareBusy;
+		private int _caretIndex;
+
 		private const string SendTransactionButtonTextString = "Send Transaction";
 		private const string WaitingForHardwareWalletButtonTextString = "Waiting for Hardware Wallet...";
 		private const string SendingTransactionButtonTextString = "Sending Transaction...";
 		private const string BuildTransactionButtonTextString = "Build Transaction";
 		private const string BuildingTransactionButtonTextString = "Building Transaction...";
 
-		private int _caretIndex;
 		private ObservableCollection<SuggestionViewModel> _suggestions;
 		private FeeDisplayFormat _feeDisplayFormat;
 
@@ -78,14 +79,14 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 		private void ResetUi()
 		{
-			_suggestions = new ObservableCollection<SuggestionViewModel>();
+			Suggestions = new ObservableCollection<SuggestionViewModel>();
 			Address = "";
 			Label = "";
 			Password = "";
 			AllSelectedAmount = Money.Zero;
 			UsdExchangeRate = Global.Synchronizer?.UsdExchangeRate ?? UsdExchangeRate;
 			IsMax = false;
-			LabelToolTip = "Start labelling today and your privacy will thank you tomorrow!";
+			LabelToolTip = "Start labeling today and your privacy will thank you tomorrow!";
 			Amount = "0.0";
 		}
 
@@ -98,7 +99,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			ResetUi();
 			SetAmountWatermarkAndToolTip(Money.Zero);
 
-			CoinList = new CoinListViewModel(Global);
+			CoinList = new CoinListViewModel(Global, CoinListContainerType.SendTabViewModel);
 			Observable.FromEventPattern(CoinList, nameof(CoinList.SelectionChanged))
 				.ObserveOn(RxApp.MainThreadScheduler)
 				.Subscribe(_ => SetFeesAndTexts());
@@ -123,7 +124,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 					betterAmount = betterAmount.Replace(',', '.');
 					int countBetterAmount = betterAmount.Count(x => x == '.');
-					if (countBetterAmount > 1) // Don't enable typing two dots.
+					if (countBetterAmount > 1) // Do not enable typing two dots.
 					{
 						var index = betterAmount.IndexOf('.', betterAmount.IndexOf('.') + 1);
 						if (index > 0)
@@ -192,26 +193,11 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 			this.WhenAnyValue(x => x.Label)
 				.ObserveOn(RxApp.MainThreadScheduler)
-				.Subscribe(x => UpdateSuggestions(x));
+				.Subscribe(UpdateSuggestions);
 
 			this.WhenAnyValue(x => x.FeeTarget)
 				.ObserveOn(RxApp.MainThreadScheduler)
 				.Subscribe(_ => SetFeesAndTexts());
-
-			this.WhenAnyValue(x => x.CaretIndex)
-				.ObserveOn(RxApp.MainThreadScheduler)
-				.Subscribe(_ =>
-			{
-				if (Label is null)
-				{
-					return;
-				}
-
-				if (CaretIndex != Label.Length)
-				{
-					CaretIndex = Label.Length;
-				}
-			});
 
 			MaxCommand = ReactiveCommand.Create(() => { IsMax = !IsMax; }, outputScheduler: RxApp.MainThreadScheduler);
 			this.WhenAnyValue(x => x.IsMax)
@@ -222,13 +208,13 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					{
 						SetAmountIfMax();
 
-						LabelToolTip = "Spending whole coins doesn't generate change, thus labeling is unnecessary.";
+						LabelToolTip = "Spending whole coins does not generate change, thus labeling is unnecessary.";
 					}
 					else
 					{
 						Amount = "0.0";
 
-						LabelToolTip = "Start labelling today and your privacy will thank you tomorrow!";
+						LabelToolTip = "Start labeling today and your privacy will thank you tomorrow!";
 					}
 				});
 
@@ -372,7 +358,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 							IsHardwareBusy = false;
 						}
 
-						signedTransaction = signedPsbt.ExtractSmartTransaction(result.Transaction.Height, result.Transaction.BlockHash, result.Transaction.BlockIndex, result.Transaction.Label, result.Transaction.FirstSeenIfMemPoolTime, result.Transaction.IsReplacement);
+						signedTransaction = signedPsbt.ExtractSmartTransaction(result.Transaction.Height, result.Transaction.BlockHash, result.Transaction.BlockIndex, result.Transaction.Label, result.Transaction.FirstSeenIfMempoolTime, result.Transaction.IsReplacement);
 					}
 
 					MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusBarStatus.BroadcastingTransaction);
@@ -416,7 +402,10 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 			var fingerprint = keyManager.MasterFingerprint;
 
-			if (fingerprint is null) return (false, "This wallet is a watch-only wallet.");
+			if (fingerprint is null)
+			{
+				return (false, "This wallet is a watch-only wallet.");
+			}
 
 			keyManager.HardwareWalletInfo = hwis.FirstOrDefault(x => x.MasterFingerprint == fingerprint);
 
@@ -434,14 +423,14 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					PinPadViewModel pinpad = IoC.Get<IShell>().Documents.OfType<PinPadViewModel>().FirstOrDefault();
 					if (pinpad is null)
 					{
-						pinpad = new PinPadViewModel(null);
+						pinpad = new PinPadViewModel(Global);
 						IoC.Get<IShell>().AddOrSelectDocument(pinpad);
 					}
 					var result = await pinpad.ShowDialogAsync();
 					DisplayActionTab();
 					if (!(result is true))
 					{
-						return (false, "PIN wasn't provided.");
+						return (false, "PIN was not provided.");
 					}
 
 					var maskedPin = pinpad.MaskedPin;
@@ -455,7 +444,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					needsPinWalletInfo = enumRes.FirstOrDefault(x => x.Type == t && x.Path == p);
 					if (needsPinWalletInfo is null)
 					{
-						return (false, "Couldn't find the hardware wallet you are working with. Did you disconnect it?");
+						return (false, "Could not find the hardware wallet you are working with. Did you disconnect it?");
 					}
 					else
 					{
@@ -578,14 +567,14 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			{
 				ConfirmationExpectedText = $"{feeTarget}0 minutes";
 			}
-			else if (feeTarget >= 7 && feeTarget <= 144) // hours
+			else if (feeTarget >= 7 && feeTarget <= Constants.OneDayConfirmationTarget) // hours
 			{
 				var h = feeTarget / 6;
 				ConfirmationExpectedText = $"{h} {IfPlural(h, "hour", "hours")}";
 			}
-			else if (feeTarget >= 145 && feeTarget < 1008) // days
+			else if (feeTarget >= 145 && feeTarget < Constants.SevenDaysConfirmationTarget) // days
 			{
-				var d = feeTarget / 144;
+				var d = feeTarget / Constants.OneDayConfirmationTarget;
 				ConfirmationExpectedText = $"{d} {IfPlural(d, "day", "days")}";
 			}
 			else if (feeTarget == 10008)
@@ -682,7 +671,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 						}
 						vsize = NBitcoinHelpers.CalculateVsizeAssumeSegwit(inNum, 2);
 					}
-					// Else whatever, don't change.
+					// Else whatever, do not change.
 				}
 			}
 
@@ -718,13 +707,13 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 			if (allFeeEstimate != null)
 			{
-				MinimumFeeTarget = allFeeEstimate.Estimations.Min(x => x.Key); // This should be always 2, but bugs will be seen at least if it isn't.
+				MinimumFeeTarget = allFeeEstimate.Estimations.Min(x => x.Key); // This should be always 2, but bugs will be seen at least if it is not.
 				MaximumFeeTarget = allFeeEstimate.Estimations.Max(x => x.Key);
 			}
 			else
 			{
 				MinimumFeeTarget = 2;
-				MaximumFeeTarget = 1008;
+				MaximumFeeTarget = Constants.SevenDaysConfirmationTarget;
 			}
 		}
 
@@ -1063,8 +1052,6 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 				SetFeesAndTexts();
 			}).DisposeWith(Disposables);
-
-			CoinList.OnOpen();
 
 			base.OnOpen();
 		}

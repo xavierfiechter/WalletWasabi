@@ -82,11 +82,11 @@ namespace System.IO
 		}
 
 		/// <summary>
-		/// It's like Directory.CreateDirectory, but doesn't fail when root is given.
+		/// It's like Directory.CreateDirectory, but does not fail when root is given.
 		/// </summary>
 		public static void EnsureDirectoryExists(string dir)
 		{
-			if (!string.IsNullOrWhiteSpace(dir)) // If root is given, then don't worry.
+			if (!string.IsNullOrWhiteSpace(dir)) // If root is given, then do not worry.
 			{
 				Directory.CreateDirectory(dir); // It does not fail if it exists.
 			}
