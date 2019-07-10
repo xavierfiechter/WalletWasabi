@@ -2304,7 +2304,7 @@ namespace WalletWasabi.Tests
 
 					#endregion PostOutput
 
-					#region GetCoinjoin
+					#region GetCoinJoin
 
 					// <-------------------------->
 					// GET COINJOIN tests
@@ -2321,7 +2321,7 @@ namespace WalletWasabi.Tests
 					Assert.Contains(input2, unsignedCoinJoin.Inputs.Select(x => x.PrevOut));
 					Assert.True(2 == unsignedCoinJoin.Inputs.Count);
 
-					#endregion GetCoinjoin
+					#endregion GetCoinJoin
 
 					#region PostSignatures
 
@@ -2996,22 +2996,22 @@ namespace WalletWasabi.Tests
 			Assert.Contains(unsignedCoinJoin.GetHash(), mempooltxs);
 
 			var coins = new List<Coin>();
-			var finalCoinjoin = await rpc.GetRawTransactionAsync(mempooltxs.First());
-			foreach (var input in finalCoinjoin.Inputs)
+			var finalCoinJoin = await rpc.GetRawTransactionAsync(mempooltxs.First());
+			foreach (var input in finalCoinJoin.Inputs)
 			{
 				var getTxOut = await rpc.GetTxOutAsync(input.PrevOut.Hash, (int)input.PrevOut.N, includeMempool: false);
 
 				coins.Add(new Coin(input.PrevOut.Hash, input.PrevOut.N, getTxOut.TxOut.Value, getTxOut.TxOut.ScriptPubKey));
 			}
 
-			FeeRate feeRateTx = finalCoinjoin.GetFeeRate(coins.ToArray());
+			FeeRate feeRateTx = finalCoinJoin.GetFeeRate(coins.ToArray());
 			var esr = await rpc.EstimateSmartFeeAsync((int)roundConfig.ConfirmationTarget, EstimateSmartFeeMode.Conservative, simulateIfRegTest: true, tryOtherFeeRates: true);
 			FeeRate feeRateReal = esr.FeeRate;
 
 			Assert.True(feeRateReal.FeePerK - (feeRateReal.FeePerK / 2) < feeRateTx.FeePerK); // Max 50% mistake.
 			Assert.True(2 * feeRateReal.FeePerK > feeRateTx.FeePerK); // Max 200% mistake.
 
-			var activeOutput = finalCoinjoin.GetIndistinguishableOutputs(includeSingle: true).OrderByDescending(x => x.count).First();
+			var activeOutput = finalCoinJoin.GetIndistinguishableOutputs(includeSingle: true).OrderByDescending(x => x.count).First();
 			Assert.True(activeOutput.value >= roundConfig.Denomination);
 			Assert.True(activeOutput.count >= roundConfig.AnonymitySet);
 
